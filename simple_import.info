@@ -1,0 +1,9 @@
+name = Simple Import
+description = Allows basic importing of users and nodes
+backdrop = 1.x
+version = 1.0
+type = module
+
+configure = admin/content/import
+
+dependencies[] = file
