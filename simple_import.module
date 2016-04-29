@@ -1,0 +1,123 @@
+<?php
+
+function simple_import_menu() {
+  $items = array();
+
+  $items['admin/content/import'] = array(
+    'title' => t('Import'),
+    'page callback' => 'backdrop_get_form',
+    'page arguments' => array('simple_import_import_data_form', 'node'),
+    'access arguments' => array('administer content'),
+    'file' => 'simple_import.admin.inc',
+    'type' => MENU_LOCAL_ITEM | MENU_NORMAL_ITEM,
+  );
+
+  $items['admin/content/import/nodes'] = array(
+    'title' => t('Nodes'),
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+    'weight' => -10,
+  );
+
+  $items['admin/content/import/users'] = array(
+    'title' => t('Users'),
+    'page callback' => 'backdrop_get_form',
+    'page arguments' => array('simple_import_import_data_form', 'user'),
+    'access arguments' => array('administer content'),
+    'file' => 'simple_import.admin.inc',
+    'type' => MENU_LOCAL_TASK,
+  );
+
+  $items['admin/content/import/configure'] = array(
+    'title' => t('Configure Import'),
+    'page callback' => 'simple_import_configure_import',
+    'access arguments' => array('administer content'),
+    'file' => 'simple_import.admin.inc',
+    'type' => MENU_CALLBACK,
+  );
+
+  $items['admin/content/import/process'] = array(
+    'title' => t('Process Import'),
+    'page callback' => 'simple_import_process_import',
+    'access arguments' => array('administer content'),
+    'file' => 'simple_import.admin.inc',
+    'type' => MENU_CALLBACK,
+  );
+
+  return $items;
+}
+
+function simple_import_simple_import_format_handlers() {
+  $handlers = array();
+
+  $handlers['csv'] = array(
+    'name' => t('Comma-separated values'),
+    'suffixes' => array('csv'),
+    'filemime' => array('text/csv'),
+    'identify callback' => 'simple_import_csv_identify',
+    'configure form' => 'simple_import_csv_config_form',
+    'process callback' => 'simple_import_csv_process',
+    'file' => 'importers/simple_import_csv.importer.inc',
+  );
+
+  $handlers['xml'] = array(
+    'name' => t('eXtensible Markup Language'),
+    'suffixes' => array('xml'),
+    'filemime' => array('text/xml'),
+    'identify callback' => 'simple_import_xml_identify',
+    'process callback' => 'simple_import_xml_process',
+    'file' => 'importers/simple_import_xml.importer.inc',
+  );
+
+  $handlers['yml'] = array(
+    'name' => t('Yet Another Markup Language'),
+    'suffixes' => array('yml', 'yaml'),
+    'filemime' => array('text/yml'),
+    'identify callback' => 'simple_import_yml_identify',
+    'process callback' => 'simple_import_yml_process',
+    'file' => 'importers/simple_import_yml.importer.inc',
+  );
+
+  $handlers['ldif'] = array(
+    'name' => 'LDAP Interchange Format',
+    'suffixes' => array('ldif'),
+    'filemime' => array('text/ldif'),
+    'identify callback' => 'simple_import_ldif_identify',
+    'process callback' => 'simple_import_ldif_process',
+    'file' => 'importers/simple_import_ldif.importer.inc',
+  );
+
+  return $handlers;
+}
+
+
+function simple_import_get_handlers($reset=FALSE) {
+  $handlers = &backdrop_static(__FUNCTION__, array(), $reset);
+  if (empty($handlers)) {
+    foreach(module_implements('simple_import_format_handlers') as $module) {
+      $new_handlers = module_invoke($module, 'simple_import_format_handlers');
+      array_walk($new_handlers,
+        function(&$item,$key,$module) { $item['module'] = $module; },
+        $module
+      );
+      $handlers = array_merge($handlers, $new_handlers);
+    }
+  }
+  return $handlers;
+}
+
+/**
+ * Load a required include file for a named handler
+ * @param  string $handler_name the name of the handler to load
+ * @return no return value
+ */
+function simple_import_load_handler($handler_name, &$form_state=NULL) {
+  $all_handlers = simple_import_get_handlers();
+  $handler = $all_handlers[$handler_name];
+  if (!empty($handler['file'])) {
+    $file = drupal_get_path('module', $handler['module']) . '/' . $handler['file'];
+    require_once $file;
+    if ($form_state) {
+      $form_state['build_info']['files']['import:' . $handler_name] = $file;
+    }
+  }
+}
