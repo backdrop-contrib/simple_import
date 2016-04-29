@@ -9,7 +9,7 @@ function simple_import_menu() {
     'page arguments' => array('simple_import_import_data_form', 'node'),
     'access arguments' => array('administer content'),
     'file' => 'simple_import.admin.inc',
-    'type' => MENU_LOCAL_ITEM | MENU_NORMAL_ITEM,
+    'type' => MENU_LOCAL_TASK | MENU_NORMAL_ITEM,
   );
 
   $items['admin/content/import/nodes'] = array(
@@ -119,5 +119,22 @@ function simple_import_load_handler($handler_name, &$form_state=NULL) {
     if ($form_state) {
       $form_state['build_info']['files']['import:' . $handler_name] = $file;
     }
+  }
+}
+
+/**
+ * Called when the batch has completed on success or error and reports the
+ * status to the user.
+ * @param  bool $success    TRUE if all operations completed
+ * @param  mixed $results    The value of $sandbox['results']
+ * @param  array $operations The list of batch operations
+ * @return  no return value
+ */
+function simple_import_batch_completed($success, $results, $operations) {
+  if ($success) {
+    backdrop_set_message(t('Converted @count records.', array('@count' => $results['total_count'])));
+  }
+  else {
+    backdrop_set_message(t('Converted @count records before encoutering an error.', array('@count' => $results['total_count'])));
   }
 }

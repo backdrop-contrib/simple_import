@@ -336,7 +336,7 @@ function simple_import_import_data_confirmation_submit(&$form, &$form_state) {
 
   $handler = $format_handlers[$form_state['storage']['file_handler']];
   $batch = array(
-    'title' => t('Importing from %'),
+    'title' => t('Importing from %filename', array('%filename' => $form_state['storage']['file']->filename)),
     'operations' => array(
       array($handler['process callback'], array('settings' => $form_state['storage'])),
     ),
@@ -348,12 +348,3 @@ function simple_import_import_data_confirmation_submit(&$form, &$form_state) {
   batch_set($batch);
 }
 
-
-function simple_import_batch_completed($success, $results, $operations) {
-  if ($success) {
-    backdrop_set_message(t('Converted @count records.', array('@count' => $state['results']['total_count'])));
-  }
-  else {
-    backdrop_set_message(t('Converted @count records before encoutering an error.', array('@count' => $state['results']['total_count'])));
-  }
-}

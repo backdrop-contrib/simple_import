@@ -122,7 +122,7 @@ function simple_import_csv_process($settings, &$context) {
     }
     $stat = fstat($fh);
     $state['total_size'] = $stat['size'];
-    $state['results']['total_count'] = 0;
+    $context['results']['total_count'] = 0;
   }
 
   // Go back to where we last left off
@@ -166,7 +166,7 @@ function simple_import_csv_process($settings, &$context) {
     $node->save();
 
     $cycle_count++;
-    $state['results']['total_count']++;
+    $context['results']['total_count']++;
   }
 
   $state['last_pos'] = ftell($fh);
