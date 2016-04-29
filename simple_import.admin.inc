@@ -3,7 +3,7 @@
 /**
  * Create the current step of the import assitant.
  */
-function simple_import_import_data_form($form, &$form_state) {
+function simple_import_import_data_form($form, &$form_state, $entity_type) {
   // Initialize the form's steps if it is not already set.
   if (empty($form_state['storage']['current_step'])) {
     $form_state['storage']['current_step'] = 'import_source';
@@ -28,7 +28,7 @@ function simple_import_import_data_form($form, &$form_state) {
         'form' => 'simple_import_import_data_confirmation_form',
       ),
     );
-    $form_state['storage']['entity_type'] = 'node';
+    $form_state['storage']['entity_type'] = $entity_type;
   }
 
   $current_step = $form_state['storage']['current_step'];
@@ -105,6 +105,13 @@ function simple_import_no_configuration_form($form, &$form_state) {
 function simple_import_source_file_form($form, &$form_state) {
   $max_size = file_upload_max_size();
 
+  $format_handlers = simple_import_get_handlers();
+
+  // Valid extensions are the combined list of extensions of all handlers
+  $valid_extensions = implode(' ', array_reduce(
+    array_column($format_handlers, 'suffixes'), 'array_merge', array()
+  ));
+
   $form['instructions'] = array(
     '#type' => 'markup',
     '#markup' => t('Choose one of the following methods for importing data.  After submitting the data, the server will try to parse the data and you will be able to map the fields in the file to fields of nodes on the system.'),
@@ -115,7 +122,7 @@ function simple_import_source_file_form($form, &$form_state) {
   $form['file_upload'] = array(
     '#type' => 'file',
     '#title' => t('Upload a file'),
-    '#description' => t('Upload a file in xml, csv or ldif formats.  Your webserver is set to accept file uploads up to @max_size.', array('@max_size' => format_size($max_size))),
+    '#description' => t('Upload a file in one of the supported formats.  Your webserver is set to accept file uploads up to @max_size. Supported formats are %formats.', array('@max_size' => format_size($max_size), '%formats' => $valid_extensions)),
   );
 
   $form['file_url'] = array(
@@ -139,21 +146,31 @@ function simple_import_source_file_form($form, &$form_state) {
 function simple_import_source_file_form_validate($form, &$form_state) {
   $format_handlers = simple_import_get_handlers();
 
+  // Valid extensions are the combined list of extensions of all handlers
   $valid_extensions = implode(' ', array_reduce(
     array_column($format_handlers, 'suffixes'), 'array_merge', array()
   ));
   $file = file_save_upload('file_upload', array(
     'file_validate_extensions' => $valid_extensions,
   ));
-
-  $file_handler = simple_import_identify_file_type($file->uri, $form_state);
-  if (!$file_handler) {
-    form_set_error('file_upload', t('Could not identify file type.'));
+  // Error on save?
+  if ($file === FALSE) {
+    form_set_error('file_upload', 'Could not save file.');
   }
 
-  $form_state['storage']['file'] = $file;
-  $form_state['storage']['file_handler'] = $file_handler;
+  // If a file appeared
+  if ($file) {
+    $file_handler = simple_import_identify_file_type($file->uri, $form_state);
+    if (!$file_handler) {
+      form_set_error('file_upload', t('Could not identify file type.'));
+    }
+    $form_state['storage']['file'] = $file;
+    $form_state['storage']['file_handler'] = $file_handler;
+  }
 
+  if (!$file) {
+    form_set_error('', t('No file to import.'));
+  }
 }
 
 function simple_import_import_source_form_submit($form, &$form_state) {
@@ -306,7 +323,7 @@ function simple_import_identify_file_type($uri, &$form_state) {
 }
 
 /*
- * STEP 3: Confirmation and batch processing.
+ * STEP 4: Confirmation and batch processing.
  */
 function simple_import_import_data_confirmation_form($form, &$form_state) {
   $form['#submit'][] = 'simple_import_import_data_confirmation_submit';
@@ -328,6 +345,5 @@ function simple_import_import_data_confirmation_submit(&$form, &$form_state) {
   if ($handler['file']) {
     $batch['file'] = backdrop_get_path('module', $handler['module']) . '/' . $handler['file'];
   }
-  watchdog('Simple Import', 'Setting batch', array(), WATCHDOG_WARNING);
   batch_set($batch);
 }
