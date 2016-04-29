@@ -347,3 +347,13 @@ function simple_import_import_data_confirmation_submit(&$form, &$form_state) {
   }
   batch_set($batch);
 }
+
+
+function simple_import_batch_completed($success, $results, $operations) {
+  if ($success) {
+    drupal_set_message(t('Converted @count records.', array('@count' => $state['results']['total_count'])));
+  }
+  else {
+    drupal_set_message(t('Converted @count records before encoutering an error.', array('@count' => $state['results']['total_count'])));
+  }
+}
