@@ -114,7 +114,7 @@ function simple_import_load_handler($handler_name, &$form_state=NULL) {
   $all_handlers = simple_import_get_handlers();
   $handler = $all_handlers[$handler_name];
   if (!empty($handler['file'])) {
-    $file = drupal_get_path('module', $handler['module']) . '/' . $handler['file'];
+    $file = backdrop_get_path('module', $handler['module']) . '/' . $handler['file'];
     require_once $file;
     if ($form_state) {
       $form_state['build_info']['files']['import:' . $handler_name] = $file;
